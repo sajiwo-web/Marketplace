@@ -3,27 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lapak Penjualan Sederhana</title>
+    <title>Lapak Penjualan Digital</title>
     <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCUqgAA2e__tiaQjQuRRZcQTsLIM5JC1nI",
+            authDomain: "marketplacesj-d0767.firebaseapp.com",
+            projectId: "marketplacesj-d0767",
+            messagingSenderId: "443129735278",
+            appId: "1:443129735278:web:db6191a42628bf47fc5e7f",
+            measurementId: "G-BDWGEB9T5T"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        window.firebaseApp = app;
+        window.db = db;
+        window.firebaseModules = {
+            collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
+        };
+    </script>
 </head>
 <body>
 
     <header>
         <h1>🛒 Lapak Penjualan Digital</h1>
-        <button id="admin-btn">Area Admin</button>
+        <div>
+            <button id="mode-toggle">Mode Gelap</button>
+            <button id="admin-btn">Area Admin</button>
+        </div>
     </header>
 
     <main id="toko-container">
-        <h2>Produk Terbaru</h2>
-        <div id="daftar-produk" class="produk-grid">
-            <div class="produk-card">
-                <h3>Template Website</h3>
-                <p>Harga: Rp 50.000</p>
-                <button class="tombol-beli" 
-                        data-nama="Template Website" 
-                        data-harga="50000" 
-                        data-nomor="6281234567890">Beli Sekarang (WhatsApp)</button>
-            </div>
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Cari produk...">
+            <button onclick="cariProduk()">Cari</button>
+            <button onclick="resetPencarian()">Reset</button>
+        </div>
+        
+        <h2>Produk Terbaru <span id="product-count"></span></h2>
+        <div id="loading" style="display:none; text-align: center; padding: 20px;">
+            <p>Memuat produk...</p>
+        </div>
+        
+        <div id="daftar-produk" class="produk-grid"></div>
+        
+        <div id="no-products" style="display:none; text-align:center; padding:40px;">
+            <p>Belum ada produk tersedia.</p>
         </div>
     </main>
 
@@ -33,22 +63,88 @@
             <input type="text" id="admin-username" placeholder="Username">
             <input type="password" id="admin-password" placeholder="Password">
             <button onclick="loginAdmin()">Login</button>
+            <button onclick="batalAdmin()" class="btn-secondary">Batal</button>
             <p id="login-msg"></p>
         </div>
 
         <div id="admin-dashboard" class="dashboard-hidden">
-            <h2>🛠️ Tambah Produk Baru</h2>
-            <input type="text" id="input-nama" placeholder="Nama Produk">
-            <input type="number" id="input-harga" placeholder="Harga">
-            <input type="text" id="input-nomor" placeholder="Nomor WA Penjual (628...)">
-            <button onclick="tambahProduk()">Tambah Produk</button>
-
-            <button onclick="logoutAdmin()" style="margin-top: 20px;">Logout</button>
+            <h2>🛠️ Kelola Produk</h2>
+            
+            <div class="admin-section">
+                <h3>Tambah Produk Baru</h3>
+                <input type="text" id="input-nama" placeholder="Nama Produk" maxlength="50">
+                <input type="number" id="input-harga" placeholder="Harga" min="1000" max="10000000">
+                <input type="text" id="input-nomor" placeholder="Nomor WA Penjual (628...)" pattern="62\d{9,12}">
+                <input type="text" id="input-deskripsi" placeholder="Deskripsi Produk (opsional)">
+                
+                <div class="upload-area">
+                    <label for="input-gambar">Gambar Produk (opsional):</label>
+                    <input type="file" id="input-gambar" accept="image/*" onchange="previewImage('input-gambar', 'preview-tambah')">
+                    <div id="preview-tambah" class="image-preview">
+                        <p>Pratinjau gambar akan muncul di sini</p>
+                    </div>
+                    <small>Ukuran maksimal: 500KB. Format: JPG, PNG</small>
+                </div>
+                
+                <button onclick="tambahProduk()">Tambah Produk</button>
+            </div>
+            
+            <div class="admin-section" id="edit-section" style="display:none;">
+                <h3>Edit Produk</h3>
+                <input type="hidden" id="edit-index">
+                <input type="hidden" id="edit-id">
+                <input type="text" id="edit-nama" placeholder="Nama Produk" maxlength="50">
+                <input type="number" id="edit-harga" placeholder="Harga" min="1000" max="10000000">
+                <input type="text" id="edit-nomor" placeholder="Nomor WA Penjual (628...)" pattern="62\d{9,12}">
+                <input type="text" id="edit-deskripsi" placeholder="Deskripsi Produk">
+                
+                <div class="upload-area">
+                    <label for="edit-gambar">Gambar Produk:</label>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <button type="button" onclick="document.getElementById('edit-gambar').click()" class="btn-secondary">
+                            Ubah Gambar
+                        </button>
+                        <button type="button" onclick="hapusGambarEdit()" class="btn-hapus">
+                            Hapus Gambar
+                        </button>
+                    </div>
+                    <input type="file" id="edit-gambar" accept="image/*" style="display:none;" onchange="previewImage('edit-gambar', 'preview-edit')">
+                    <div id="preview-edit" class="image-preview">
+                        <p>Gambar saat ini akan muncul di sini</p>
+                    </div>
+                    <small>Kosongkan jika tidak ingin mengubah gambar</small>
+                </div>
+                
+                <button onclick="simpanEdit()">Simpan Perubahan</button>
+                <button onclick="batalEdit()" class="btn-secondary">Batal Edit</button>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Produk Saat Ini <small>(Klik untuk edit)</small></h3>
+                <div id="admin-produk-list" class="produk-grid"></div>
+            </div>
+            
+            <div style="margin-top: 30px; text-align: center;">
+                <button onclick="logoutAdmin()" class="btn-logout">Logout</button>
+                <button onclick="batalAdmin()" class="btn-secondary">Kembali ke Toko</button>
+            </div>
         </div>
     </section>
 
+    <div id="confirm-modal" class="modal-hidden">
+        <div class="modal-content">
+            <h3>Konfirmasi</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-buttons">
+                <button onclick="confirmAction(true)" id="confirm-yes">Ya</button>
+                <button onclick="confirmAction(false)" id="confirm-no">Tidak</button>
+            </div>
+        </div>
+    </div>
+
     <footer>
-        <p>&copy; 2024 Lapak Sederhana</p>
+        <p>&copy; 2024 Lapak Digital | <span id="total-products">0</span> produk tersedia</p>
+        <p id="firebase-status" style="font-size: 12px; color: #28a745;">✅ Terhubung ke Firebase</p>
     </footer>
 
     <script src="script.js"></script>
