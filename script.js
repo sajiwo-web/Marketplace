@@ -1,120 +1,134 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const products = [
-        {
-            id: 1,
-            title: "Template Bisnis",
-            description: "Template website profesional untuk bisnis dengan desain elegan dan modern.",
-            price: "Rp 299.000",
-            image: "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "Bisnis"
-        },
-        {
-            id: 2,
-            title: "Template E-Commerce",
-            description: "Template lengkap untuk toko online dengan sistem keranjang belanja dan checkout.",
-            price: "Rp 499.000",
-            image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "E-Commerce"
-        },
-        {
-            id: 3,
-            title: "Template Portfolio",
-            description: "Template portfolio kreatif untuk menampilkan karya dan keahlian Anda.",
-            price: "Rp 249.000",
-            image: "https://images.unsplash.com/photo-1555099962-4199c345e5dd?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "Portfolio"
-        },
-        {
-            id: 4,
-            title: "Template Restoran",
-            description: "Template website untuk restoran dengan menu online dan sistem reservasi.",
-            price: "Rp 349.000",
-            image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "Kuliner"
-        },
-        {
-            id: 5,
-            title: "Template Blog",
-            description: "Template blog modern dengan tata letak yang optimal untuk konten tulisan.",
-            price: "Rp 199.000",
-            image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "Blog"
-        },
-        {
-            id: 6,
-            title: "Template Edukasi",
-            description: "Template website untuk kursus online dan platform edukasi digital.",
-            price: "Rp 399.000",
-            image: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-            category: "Edukasi"
-        }
-    ];
+// --- Data Produk (Disimpan di sini secara statis untuk contoh) ---
+let produkList = [
+    { nama: "Jasa Desain Logo", harga: 150000, nomorWa: "6281234567890" },
+    { nama: "Ebook Panduan Investasi", harga: 75000, nomorWa: "6289876543210" }
+];
 
-    const productsContainer = document.getElementById('products-container');
-    const phoneNumber = "6281234567890"; // Ganti dengan nomor WhatsApp Anda
+// --- FUNGSI TAMPILAN TOKO ---
 
-    function loadProducts() {
-        productsContainer.innerHTML = '';
-        
-        products.forEach(product => {
-            const productCard = document.createElement('div');
-            productCard.className = 'product-card';
-            
-            const message = `Halo, saya tertarik dengan produk *${product.title}* seharga *${product.price}*. Bisakah saya mendapatkan informasi lebih lanjut?`;
-            const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-            
-            productCard.innerHTML = `
-                <img src="${product.image}" alt="${product.title}" class="product-image">
-                <div class="product-info">
-                    <h3 class="product-title">${product.title}</h3>
-                    <p class="product-description">${product.description}</p>
-                    <div class="product-price">${product.price}</div>
-                    <a href="${whatsappLink}" target="_blank" class="buy-button">
-                        <i class="fab fa-whatsapp"></i> Beli Sekarang
-                    </a>
-                </div>
-            `;
-            
-            productsContainer.appendChild(productCard);
-        });
-    }
+function renderProduk() {
+    const container = document.getElementById('daftar-produk');
+    container.innerHTML = ''; // Kosongkan container
 
-    function initSmoothScroll() {
-        const links = document.querySelectorAll('a[href^="#"]');
-        
-        links.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-    }
+    produkList.forEach(produk => {
+        const card = document.createElement('div');
+        card.className = 'produk-card';
+        card.innerHTML = `
+            <h3>${produk.nama}</h3>
+            <p>Harga: Rp ${formatRupiah(produk.harga)}</p>
+            <button class="tombol-beli" 
+                    data-nama="${produk.nama}" 
+                    data-harga="${produk.harga}" 
+                    data-nomor="${produk.nomorWa}">Beli Sekarang (WhatsApp)</button>
+        `;
+        container.appendChild(card);
+    });
 
-    function initNavbarScroll() {
-        const header = document.querySelector('header');
-        
-        window.addEventListener('scroll', function() {
-            if (window.scrollY > 100) {
-                header.style.boxShadow = '0 6px 18px rgba(0, 0, 0, 0.15)';
-            } else {
-                header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-            }
-        });
-    }
+    // Pasang Event Listener untuk tombol Beli setelah produk di-render
+    document.querySelectorAll('.tombol-beli').forEach(button => {
+        button.addEventListener('click', handleBeliClick);
+    });
+}
 
-    loadProducts();
-    initSmoothScroll();
-    initNavbarScroll();
+function formatRupiah(angka) {
+    // Fungsi sederhana untuk format mata uang
+    return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function handleBeliClick(event) {
+    const namaProduk = event.target.dataset.nama;
+    const hargaProduk = event.target.dataset.harga;
+    const nomorWa = event.target.dataset.nomor;
+
+    const pesan = `Halo, saya tertarik untuk membeli produk *${namaProduk}* seharga Rp ${formatRupiah(hargaProduk)}. Apakah produk tersedia?`;
     
-    console.log('Marketplace Template Website loaded successfully!');
-});
+    // Encode URI untuk memastikan pesan aman di URL
+    const waUrl = `https://wa.me/${nomorWa}?text=${encodeURIComponent(pesan)}`;
+
+    // Buka tab baru dengan link WhatsApp
+    window.open(waUrl, '_blank');
+}
+
+// --- FUNGSI AREA ADMIN ---
+
+// Konstanta login (STATIS)
+const ADMIN_USERNAME = 'admin_toko';
+const ADMIN_PASSWORD = 'password123';
+
+document.getElementById('admin-btn').addEventListener('click', toggleAdminArea);
+
+function toggleAdminArea() {
+    const adminArea = document.getElementById('admin-area');
+    const tokoContainer = document.getElementById('toko-container');
+    
+    // Toggle tampilan Admin Area
+    adminArea.classList.toggle('admin-hidden');
+
+    // Sembunyikan toko saat Admin Area muncul
+    if (!adminArea.classList.contains('admin-hidden')) {
+        tokoContainer.style.display = 'none';
+    } else {
+        tokoContainer.style.display = 'block';
+    }
+}
+
+function loginAdmin() {
+    const usernameInput = document.getElementById('admin-username').value;
+    const passwordInput = document.getElementById('admin-password').value;
+    const loginMsg = document.getElementById('login-msg');
+
+    if (usernameInput === ADMIN_USERNAME && passwordInput === ADMIN_PASSWORD) {
+        document.getElementById('login-form').classList.add('dashboard-hidden');
+        document.getElementById('admin-dashboard').classList.remove('dashboard-hidden');
+        loginMsg.textContent = 'Login berhasil!';
+        loginMsg.style.color = 'green';
+    } else {
+        loginMsg.textContent = 'Username atau password salah.';
+        loginMsg.style.color = 'red';
+    }
+}
+
+function logoutAdmin() {
+    document.getElementById('admin-dashboard').classList.add('dashboard-hidden');
+    document.getElementById('login-form').classList.remove('dashboard-hidden');
+    document.getElementById('login-msg').textContent = '';
+    
+    // Kosongkan input
+    document.getElementById('admin-username').value = '';
+    document.getElementById('admin-password').value = '';
+}
+
+function tambahProduk() {
+    const nama = document.getElementById('input-nama').value;
+    const harga = parseInt(document.getElementById('input-harga').value);
+    const nomorWa = document.getElementById('input-nomor').value;
+
+    if (!nama || isNaN(harga) || !nomorWa) {
+        alert("Semua kolom harus diisi dengan benar!");
+        return;
+    }
+
+    const produkBaru = {
+        nama: nama,
+        harga: harga,
+        nomorWa: nomorWa
+    };
+
+    // Tambahkan produk baru ke list
+    produkList.push(produkBaru);
+    
+    // Render ulang tampilan toko
+    renderProduk();
+
+    // Reset formulir
+    document.getElementById('input-nama').value = '';
+    document.getElementById('input-harga').value = '';
+    document.getElementById('input-nomor').value = '';
+
+    alert(`Produk "${nama}" berhasil ditambahkan!`);
+}
+
+
+// Inisialisasi: Panggil fungsi render saat halaman dimuat
+document.addEventListener('DOMContentLoaded', renderProduk);
+
