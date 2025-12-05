@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lapak Penjualan Digital</title>
+    <meta name="description" content="Toko online penjualan produk digital dengan berbagai kategori produk">
     <link rel="stylesheet" href="style.css">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -17,10 +18,9 @@
             appId: "1:443129735278:web:db6191a42628bf47fc5e7f",
             measurementId: "G-BDWGEB9T5T"
         };
-
+        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
         window.firebaseApp = app;
         window.db = db;
         window.firebaseModules = {
@@ -29,34 +29,65 @@
     </script>
 </head>
 <body>
-
     <header>
         <h1>🛒 Lapak Penjualan Digital</h1>
         <div>
-            <button id="mode-toggle">Mode Gelap</button>
-            <button id="admin-btn">Area Admin</button>
+            <button id="wishlist-btn">❤️ Favorit</button>
+            <button id="cart-btn">🛒 Keranjang (<span id="cart-count">0</span>)</button>
+            <button id="mode-toggle">🌙 Mode Gelap</button>
+            <button id="admin-btn">🔧 Area Admin</button>
         </div>
     </header>
-
+    
     <main id="toko-container">
         <div class="search-bar">
             <input type="text" id="search-input" placeholder="Cari produk...">
-            <button onclick="cariProduk()">Cari</button>
-            <button onclick="resetPencarian()">Reset</button>
+            <button onclick="cariProduk()">🔍 Cari</button>
+            <button onclick="resetPencarian()">🔄 Reset</button>
         </div>
         
-        <h2>Produk Terbaru <span id="product-count"></span></h2>
-        <div id="loading" style="display:none; text-align: center; padding: 20px;">
+        <div class="category-filter">
+            <button class="category-btn active" data-category="all" onclick="filterByCategory('all')">Semua</button>
+            <button class="category-btn" data-category="elektronik" onclick="filterByCategory('elektronik')">📱 Elektronik</button>
+            <button class="category-btn" data-category="fashion" onclick="filterByCategory('fashion')">👕 Fashion</button>
+            <button class="category-btn" data-category="makanan" onclick="filterByCategory('makanan')">🍕 Makanan</button>
+            <button class="category-btn" data-category="buku" onclick="filterByCategory('buku')">📚 Buku</button>
+            <button class="category-btn" data-category="olahraga" onclick="filterByCategory('olahraga')">⚽ Olahraga</button>
+        </div>
+        
+        <h2>Produk Terbaru <span id="product-count">(0 produk)</span></h2>
+        
+        <div id="loading" style="display:none; text-align: center; padding: 40px;">
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
             <p>Memuat produk...</p>
         </div>
         
         <div id="daftar-produk" class="produk-grid"></div>
-        
         <div id="no-products" style="display:none; text-align:center; padding:40px;">
             <p>Belum ada produk tersedia.</p>
         </div>
     </main>
-
+    
+    <div id="cart-sidebar">
+        <div class="cart-header">
+            <h2 style="margin:0;">🛒 Keranjang Belanja</h2>
+            <button onclick="closeCart()" style="background:none; border:none; font-size:24px; cursor:pointer;">×</button>
+        </div>
+        <div id="cart-items"></div>
+        <div style="margin-top: 20px;">
+            <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:bold; margin-bottom:15px;">
+                <span>Total:</span>
+                <span id="cart-total">Rp 0</span>
+            </div>
+            <button onclick="checkoutCart()" style="width:100%; padding:15px; background:#25D366; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">
+                💬 Checkout via WhatsApp
+            </button>
+            <button onclick="cart = []; updateCart();" style="width:100%; padding:10px; background:#6C757D; color:white; border:none; border-radius:8px; margin-top:10px; cursor:pointer;">
+                🗑️ Kosongkan Keranjang
+            </button>
+        </div>
+    </div>
+    
     <section id="admin-area" class="admin-hidden">
         <div id="login-form">
             <h2>Masuk Admin</h2>
@@ -66,7 +97,7 @@
             <button onclick="batalAdmin()" class="btn-secondary">Batal</button>
             <p id="login-msg"></p>
         </div>
-
+        
         <div id="admin-dashboard" class="dashboard-hidden">
             <h2>🛠️ Kelola Produk</h2>
             
@@ -76,7 +107,14 @@
                 <input type="number" id="input-harga" placeholder="Harga" min="1000" max="10000000">
                 <input type="text" id="input-nomor" placeholder="Nomor WA Penjual (628...)" pattern="62\d{9,12}">
                 <input type="text" id="input-deskripsi" placeholder="Deskripsi Produk (opsional)">
-                
+                <select id="input-kategori" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid #ddd; border-radius:8px;">
+                    <option value="umum">Umum</option>
+                    <option value="elektronik">Elektronik</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="makanan">Makanan</option>
+                    <option value="buku">Buku</option>
+                    <option value="olahraga">Olahraga</option>
+                </select>
                 <div class="upload-area">
                     <label for="input-gambar">Gambar Produk (opsional):</label>
                     <input type="file" id="input-gambar" accept="image/*" onchange="previewImage('input-gambar', 'preview-tambah')">
@@ -85,7 +123,6 @@
                     </div>
                     <small>Ukuran maksimal: 500KB. Format: JPG, PNG</small>
                 </div>
-                
                 <button onclick="tambahProduk()">Tambah Produk</button>
             </div>
             
@@ -97,7 +134,14 @@
                 <input type="number" id="edit-harga" placeholder="Harga" min="1000" max="10000000">
                 <input type="text" id="edit-nomor" placeholder="Nomor WA Penjual (628...)" pattern="62\d{9,12}">
                 <input type="text" id="edit-deskripsi" placeholder="Deskripsi Produk">
-                
+                <select id="edit-kategori" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid #ddd; border-radius:8px;">
+                    <option value="umum">Umum</option>
+                    <option value="elektronik">Elektronik</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="makanan">Makanan</option>
+                    <option value="buku">Buku</option>
+                    <option value="olahraga">Olahraga</option>
+                </select>
                 <div class="upload-area">
                     <label for="edit-gambar">Gambar Produk:</label>
                     <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
@@ -114,7 +158,6 @@
                     </div>
                     <small>Kosongkan jika tidak ingin mengubah gambar</small>
                 </div>
-                
                 <button onclick="simpanEdit()">Simpan Perubahan</button>
                 <button onclick="batalEdit()" class="btn-secondary">Batal Edit</button>
             </div>
@@ -130,23 +173,12 @@
             </div>
         </div>
     </section>
-
-    <div id="confirm-modal" class="modal-hidden">
-        <div class="modal-content">
-            <h3>Konfirmasi</h3>
-            <p id="confirm-message"></p>
-            <div class="modal-buttons">
-                <button onclick="confirmAction(true)" id="confirm-yes">Ya</button>
-                <button onclick="confirmAction(false)" id="confirm-no">Tidak</button>
-            </div>
-        </div>
-    </div>
-
+    
     <footer>
         <p>&copy; 2024 Lapak Digital | <span id="total-products">0</span> produk tersedia</p>
         <p id="firebase-status" style="font-size: 12px; color: #28a745;">✅ Terhubung ke Firebase</p>
     </footer>
-
+    
     <script src="script.js"></script>
 </body>
-</html>
+                    </html>
